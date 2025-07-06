@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kidney Therapeutic Simulation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .control-group {
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .control-group:hover {
+            transform: translateY(-5px);
+        }
+        
+        .control-group h3 {
+            margin-top: 0;
+            color: #495057;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .control-item {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .value-display {
+            display: inline-block;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-left: 10px;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .run-button {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        
+        .run-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+        }
+        
+        .plots-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .plot-container {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        
+        .results-summary {
+            background: linear-gradient(145deg, #e8f5e8, #d4edda);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 5px solid #28a745;
+        }
+        
+        .results-summary h3 {
+            margin-top: 0;
+            color: #155724;
+        }
+        
+        .metric {
+            display: inline-block;
+            background: rgba(255,255,255,0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            .plots-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🫘 Interactive Kidney Therapeutic Simulation</h1>
+        
+        <div class="controls-grid">
+            <div class="control-group">
+                <h3>💊 Dosage Parameters</h3>
+                <div class="control-item">
+                    <label for="dose">Total Dose (mg):</label>
+                    <!-- Updated max attribute to 40 -->
+                    <input type="range" id="dose" min="0.1" max="40" step="0.1" value="2">
+                    <span class="value-display" id="dose-value">2.0</span>
+                </div>
+                <div class="control-item">
+                    <label for="hgf-fraction">HGF Fraction:</label>
+                    <input type="range" id="hgf-fraction" min="0.1" max="0.8" step="0.05" value="0.4">
+                    <span class="value-display" id="hgf-fraction-value">0.40</span>
+                </div>
+                <div class="control-item">
+                    <label for="vegf-fraction">VEGF Fraction:</label>
+                    <input type="range" id="vegf-fraction" min="0.1" max="0.8" step="0.05" value="0.3">
+                    <span class="value-display" id="vegf-fraction-value">0.30</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>⏱️ Release Kinetics</h3>
+                <div class="control-item">
+                    <label for="burst-release">Burst Release (%):</label>
+                    <input type="range" id="burst-release" min="5" max="50" step="5" value="30">
+                    <span class="value-display" id="burst-release-value">30</span>
+                </div>
+                <div class="control-item">
+                    <label for="plateau-duration">Plateau Duration (days):</label>
+                    <input type="range" id="plateau-duration" min="3" max="21" step="1" value="7">
+                    <span class="value-display" id="plateau-duration-value">7</span>
+                </div>
+                <div class="control-item">
+                    <label for="tail-rate">Tail Release Rate:</label>
+                    <input type="range" id="tail-rate" min="0.05" max="0.5" step="0.05" value="0.2">
+                    <span class="value-display" id="tail-rate-value">0.20</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>🧬 PK/PD Parameters</h3>
+                <div class="control-item">
+                    <label for="diffusion-rate">Diffusion Rate:</label>
+                    <input type="range" id="diffusion-rate" min="0.1" max="2.0" step="0.1" value="0.5">
+                    <span class="value-display" id="diffusion-rate-value">0.5</span>
+                </div>
+                <div class="control-item">
+                    <label for="binding-affinity">Binding Affinity (Kon):</label>
+                    <input type="range" id="binding-affinity" min="0.01" max="0.5" step="0.01" value="0.1">
+                    <span class="value-display" id="binding-affinity-value">0.10</span>
+                </div>
+                <div class="control-item">
+                    <label for="uptake-rate">Cellular Uptake Rate:</label>
+                    <input type="range" id="uptake-rate" min="0.01" max="0.2" step="0.01" value="0.05">
+                    <span class="value-display" id="uptake-rate-value">0.05</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>🎯 Therapeutic Window</h3>
+                <div class="control-item">
+                    <label for="simulation-duration">Simulation Duration (days):</label>
+                    <input type="range" id="simulation-duration" min="30" max="180" step="10" value="60">
+                    <span class="value-display" id="simulation-duration-value">60</span>
+                </div>
+                <div class="control-item">
+                    <label for="max-efficacy">Maximum Efficacy (Emax):</label>
+                    <input type="range" id="max-efficacy" min="10" max="50" step="5" value="30">
+                    <span class="value-display" id="max-efficacy-value">30</span>
+                </div>
+                <div class="control-item">
+                    <label for="potency">Potency (EC50):</label>
+                    <input type="range" id="potency" min="0.1" max="2.0" step="0.1" value="0.5">
+                    <span class="value-display" id="potency-value">0.5</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>🏥 Disease State</h3>
+                <div class="control-item">
+                    <label for="baseline-gfr">Baseline GFR (ml/min):</label>
+                    <input type="range" id="baseline-gfr" min="10" max="40" step="2" value="22">
+                    <span class="value-display" id="baseline-gfr-value">22</span>
+                </div>
+                <div class="control-item">
+                    <label for="initial-fibrosis">Initial Fibrosis (%):</label>
+                    <input type="range" id="initial-fibrosis" min="10" max="80" step="5" value="50">
+                    <span class="value-display" id="initial-fibrosis-value">50</span>
+                </div>
+                <div class="control-item">
+                    <label for="inflammation-level">Inflammation Level:</label>
+                    <input type="range" id="inflammation-level" min="0.5" max="2.0" step="0.1" value="1.0">
+                    <span class="value-display" id="inflammation-level-value">1.0</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>🛡️ Safety Parameters</h3>
+                <div class="control-item">
+                    <label for="immunogenicity">Immunogenicity Risk:</label>
+                    <input type="range" id="immunogenicity" min="0.001" max="0.05" step="0.001" value="0.01">
+                    <span class="value-display" id="immunogenicity-value">0.010</span>
+                </div>
+                <div class="control-item">
+                    <label for="clearance-threshold">Clearance Threshold:</label>
+                    <input type="range" id="clearance-threshold" min="5" max="50" step="5" value="10">
+                    <span class="value-display" id="clearance-threshold-value">10</span>
+                </div>
+            </div>
+        </div>
+        
+        <button class="run-button" onclick="runSimulation()">🚀 Run Simulation</button>
+        
+        <div class="plots-container">
+            <div class="plot-container">
+                <div id="gfr-plot"></div>
+            </div>
+            <div class="plot-container">
+                <div id="fibrosis-plot"></div>
+            </div>
+        </div>
+        
+        <div class="results-summary" id="results-summary" style="display: none;">
+            <h3>📊 Simulation Results</h3>
+            <div id="metrics-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // Update value displays
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            const valueDisplay = document.getElementById(input.id + '-value');
+            
+            input.addEventListener('input', function() {
+                const value = parseFloat(this.value);
+                if (this.id.includes('fraction') || this.id.includes('rate') || this.id === 'potency' || this.id === 'immunogenicity') {
+                    valueDisplay.textContent = value.toFixed(2);
+                } else if (this.id.includes('percentage') || this.id === 'burst-release' || this.id === 'initial-fibrosis') {
+                    valueDisplay.textContent = value + '%';
+                } else {
+                    valueDisplay.textContent = value.toString();
+                }
+            });
+        });
+
+        // Kidney simulation classes (simplified for browser)
+        class ReleaseKinetics {
+            constructor(params) {
+                this.params = params;
+            }
+            
+            releaseProfile(t, doseScale = 1.0) {
+                const out = {};
+                for (const [prot, p] of Object.entries(this.params)) {
+                    const { burst_frac, t_plateau, k_tail } = p;
+                    let frac;
+                    
+                    if (t <= 1) {
+                        frac = burst_frac * t;
+                    } else if (t <= t_plateau) {
+                        frac = burst_frac + (0.8 - burst_frac) * ((t - 1) / (t_plateau - 1));
+                    } else {
+                        frac = 0.8 + (1.0 - 0.8) * (1 - Math.exp(-k_tail * (t - t_plateau)));
+                    }
+                    
+                    out[prot] = Math.min(frac, 1.0) * doseScale;
+                }
+                return out;
+            }
+        }
+
+        class PKPD {
+            constructor(Emax, EC50, baseGFR, baseFib) {
+                this.Emax = Emax;
+                this.EC50 = EC50;
+                this.baseGFR = baseGFR;
+                this.baseFib = baseFib;
+            }
+            
+            effect(Ceff) {
+                const effectGFR = this.Emax * Ceff / (this.EC50 + Ceff);
+                const GFR = this.baseGFR + effectGFR;
+                const fib = this.baseFib * (1 - effectGFR / this.Emax);
+                return [GFR, Math.max(0, fib)];
+            }
+        }
+
+        class Pathology {
+            constructor(fibrosis, inflammation, tortuosity) {
+                this.fibrosis = fibrosis;
+                this.inflammation = inflammation;
+                this.tortuosity = tortuosity;
+            }
+            
+            update(GFR, fibrosisChange) {
+                this.fibrosis = Math.max(0.0, this.fibrosis - fibrosisChange);
+                this.inflammation = Math.max(0.1, this.inflammation * (1 - fibrosisChange));
+                this.tortuosity = 1 + this.fibrosis * 2;
+                return {
+                    fibrosis: this.fibrosis,
+                    inflammation: this.inflammation,
+                    tortuosity: this.tortuosity
+                };
+            }
+        }
+
+        function runSimulation() {
+            // Get parameter values
+            const dose = parseFloat(document.getElementById('dose').value);
+            const hgfFrac = parseFloat(document.getElementById('hgf-fraction').value);
+            const vegfFrac = parseFloat(document.getElementById('vegf-fraction').value);
+            const bmp7Frac = 1.0 - hgfFrac - vegfFrac;
+            
+            const burstRelease = parseFloat(document.getElementById('burst-release').value) / 100;
+            const plateauDuration = parseFloat(document.getElementById('plateau-duration').value);
+            const tailRate = parseFloat(document.getElementById('tail-rate').value);
+            
+            const diffusionRate = parseFloat(document.getElementById('diffusion-rate').value);
+            const bindingAffinity = parseFloat(document.getElementById('binding-affinity').value);
+            const uptakeRate = parseFloat(document.getElementById('uptake-rate').value);
+            
+            const simDuration = parseFloat(document.getElementById('simulation-duration').value);
+            const maxEfficacy = parseFloat(document.getElementById('max-efficacy').value);
+            const potency = parseFloat(document.getElementById('potency').value);
+            
+            const baselineGFR = parseFloat(document.getElementById('baseline-gfr').value);
+            const initialFibrosis = parseFloat(document.getElementById('initial-fibrosis').value) / 100;
+            const inflammationLevel = parseFloat(document.getElementById('inflammation-level').value);
+            
+            const immunogenicity = parseFloat(document.getElementById('immunogenicity').value);
+            const clearanceThreshold = parseFloat(document.getElementById('clearance-threshold').value);
+
+            // Initialize simulation components
+            const release = new ReleaseKinetics({
+                'HGF': { burst_frac: burstRelease, t_plateau: plateauDuration, k_tail: tailRate },
+                'VEGF': { burst_frac: burstRelease * 0.8, t_plateau: plateauDuration, k_tail: tailRate * 0.8 },
+                'BMP7': { burst_frac: burstRelease * 0.9, t_plateau: plateauDuration * 1.2, k_tail: tailRate * 0.6 }
+            });
+            
+            const pkpd = new PKPD(maxEfficacy, potency, baselineGFR, initialFibrosis);
+            const pathology = new Pathology(initialFibrosis, inflammationLevel, 1.0);
+            
+            // Run simulation
+            const dt = 0.1;
+            const timesteps = Math.floor(simDuration / dt);
+            const timePoints = [];
+            const gfrTrace = [];
+            const fibrosisTrace = [];
+            
+            let cumulativeHGF = 0;
+            let cumulativeVEGF = 0;
+            let cumulativeBMP7 = 0;
+            let antibodyTiter = 0;
+            
+            for (let i = 0; i < timesteps; i++) {
+                const t = i * dt;
+                timePoints.push(t);
+                
+                // Release with dose scaling
+                // Adjusted dose scaling to reflect the new max dose of 40mg
+                const doseScale = dose / 20.0; // Normalized to a reference dose (e.g., if 20mg was the previous max effective dose)
+                const rel = release.releaseProfile(t / 24, doseScale);
+                
+                // Simplified PK: accumulate with clearance
+                const clearanceFactor = 1 + (antibodyTiter / clearanceThreshold);
+                cumulativeHGF += rel['HGF'] * hgfFrac - cumulativeHGF * 0.1 * clearanceFactor * dt;
+                cumulativeVEGF += rel['VEGF'] * vegfFrac - cumulativeVEGF * 0.1 * clearanceFactor * dt;
+                cumulativeBMP7 += rel['BMP7'] * bmp7Frac - cumulativeBMP7 * 0.1 * clearanceFactor * dt;
+                
+                // Effective concentration (weighted sum)
+                const Ceff = cumulativeHGF * 0.6 + cumulativeVEGF * 0.3 + cumulativeBMP7 * 0.1;
+                
+                // PD effect
+                const [GFR, fib] = pkpd.effect(Ceff);
+                
+                // Update pathology
+                const deltaGFR = Math.max(0.0, GFR - pkpd.baseGFR);
+                const fibrosisChange = deltaGFR / pkpd.Emax;
+                pathology.update(GFR, fibrosisChange);
+                
+                // Record traces
+                gfrTrace.push(GFR);
+                fibrosisTrace.push(pathology.fibrosis);
+                
+                // Update immunogenicity
+                const totalExposure = cumulativeHGF + cumulativeVEGF + cumulativeBMP7;
+                antibodyTiter += immunogenicity * totalExposure * dt;
+            }
+            
+            // Plot results
+            plotResults(timePoints, gfrTrace, fibrosisTrace, baselineGFR, initialFibrosis, antibodyTiter);
+        }
+
+        function plotResults(time, gfr, fibrosis, baselineGFR, initialFibrosis, antibodyTiter) {
+            // GFR plot
+            const gfrTrace = {
+                x: time,
+                y: gfr,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'GFR',
+                line: {
+                    color: '#667eea',
+                    width: 3
+                }
+            };
+            
+            const gfrBaseline = {
+                x: [time[0], time[time.length - 1]],
+                y: [baselineGFR, baselineGFR],
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Baseline',
+                line: {
+                    color: '#dc3545',
+                    width: 2,
+                    dash: 'dash'
+                }
+            };
+            
+            const gfrLayout = {
+                title: {
+                    text: 'GFR over Time',
+                    font: { size: 18, color: '#2c3e50' }
+                },
+                xaxis: { title: 'Time (days)' },
+                yaxis: { title: 'GFR (ml/min)' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                margin: { t: 50, r: 30, b: 50, l: 60 }
+            };
+            
+            Plotly.newPlot('gfr-plot', [gfrTrace, gfrBaseline], gfrLayout, {responsive: true});
+            
+            // Fibrosis plot
+            const fibrosisTrace = {
+                x: time,
+                y: fibrosis.map(f => f * 100), // Convert to percentage
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Fibrosis',
+                line: {
+                    color: '#764ba2',
+                    width: 3
+                }
+            };
+            
+            const fibrosisBaseline = {
+                x: [time[0], time[time.length - 1]],
+                y: [initialFibrosis * 100, initialFibrosis * 100],
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Initial',
+                line: {
+                    color: '#dc3545',
+                    width: 2,
+                    dash: 'dash'
+                }
+            };
+            
+            const fibrosisLayout = {
+                title: {
+                    text: 'Fibrosis over Time',
+                    font: { size: 18, color: '#2c3e50' }
+                },
+                xaxis: { title: 'Time (days)' },
+                yaxis: { title: 'Fibrosis (%)' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                margin: { t: 50, r: 30, b: 50, l: 60 }
+            };
+            
+            Plotly.newPlot('fibrosis-plot', [fibrosisTrace, fibrosisBaseline], fibrosisLayout, {responsive: true});
+            
+            // Update results summary
+            const finalGFR = gfr[gfr.length - 1];
+            const finalFibrosis = fibrosis[fibrosis.length - 1] * 100;
+            const gfrImprovement = ((finalGFR - baselineGFR) / baselineGFR * 100);
+            const fibrosisReduction = ((initialFibrosis * 100 - finalFibrosis) / (initialFibrosis * 100) * 100);
+            
+            const metricsContainer = document.getElementById('metrics-container');
+            metricsContainer.innerHTML = `
+                <span class="metric">Final GFR: ${finalGFR.toFixed(1)} ml/min</span>
+                <span class="metric">GFR Improvement: ${gfrImprovement.toFixed(1)}%</span>
+                <span class="metric">Final Fibrosis: ${finalFibrosis.toFixed(1)}%</span>
+                <span class="metric">Fibrosis Reduction: ${fibrosisReduction.toFixed(1)}%</span>
+                <span class="metric">Antibody Titer: ${antibodyTiter.toFixed(1)}</span>
+            `;
+            
+            document.getElementById('results-summary').style.display = 'block';
+        }
+
+        // Run initial simulation
+        runSimulation();
+    </script>
+</body>
+</html>
